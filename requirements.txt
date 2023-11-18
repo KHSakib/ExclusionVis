@@ -7,5 +7,6 @@ prefixspan==0.5.2
 PyAutoGUI==0.9.54
 seaborn==0.12.2
 streamlit==1.26.0
+plotly==5.3.1
 
 
