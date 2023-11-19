@@ -121,7 +121,7 @@ def run_dashboard():
         user_min_confidence = st.slider("Min Confidence", min_value=0.00, max_value=1.00, value=0.5, step=0.01)
         user_min_age = st.slider("Min Age", min_value=0, max_value=70, value=30, step=1)
         user_gender = st.selectbox("Select Gender", ["Male", "Female", "Both"])
-        algo_filter = st.selectbox('Select Algo', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
+        algo_filter = st.selectbox('Select Algorithm', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
         filter_option = st.selectbox('Select filter option', ('Precision', 'Recall'))
         generate_pattern = st.form_submit_button("Generate Pattern")
 
