@@ -16,38 +16,22 @@ def filedownload(df):
     return href
 
 def visualize_pattern_generation(filtered_data, top5_patterns_df, algorithm_choice, user_min_confidence):
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f'**Total Number of Reasons: {filtered_data.shape[0]}**')
-        st.dataframe(filtered_data[["Exclusion", "reason", "confidence", "report_type"]], height=450)
-        st.markdown(filedownload(filtered_data), unsafe_allow_html=True)
+    st.markdown(f'**Total Number of Reasons: {filtered_data.shape[0]}**')
+    st.dataframe(filtered_data[["Exclusion", "reason", "confidence", "report_type"]], height=450)
+    st.markdown(filedownload(filtered_data), unsafe_allow_html=True)
 
-    with col2:
-        try:
-            # Define confidence ranges
-            confidence_ranges = [(i / 10, (i + 1) / 10) for i in range(int(user_min_confidence * 10), 10)]
+def create_table():
+    data = {
+        'Algorithm': ['Binary Relevance', 'Binary Relevance', 'Binary Relevance', 'Binary Relevance', 'Binary Relevance', 'Classifier Chain', 'Classifier Chain', 'Classifier Chain', 'Classifier Chain', 'Classifier Chain', 'Label Powerset', 'Label Powerset', 'Label Powerset', 'Label Powerset', 'Label Powerset', 'Ensemble Learning', 'Ensemble Learning', 'Ensemble Learning', 'Ensemble Learning', 'Ensemble Learning'],
+        'Classifier': ['MultinomialNB', 'SVC', 'Logistic regression', 'Random Forest', 'Decision Tree', 'MultinomialNB', 'SVC', 'Logistic regression', 'Random Forest', 'Decision Tree', 'MultinomialNB', 'SVC', 'Logistic regression', 'Random Forest', 'Decision Tree', 'MultinomialNB', 'SVC', 'Logistic regression', 'Random Forest', 'Decision Tree'],
+        'Precision': ['0.26', '0.62', '0.80', '0.93', '0.63', '0.26', '0.94', '0.80', '0.93', '0.61', '0.35', '0.89', '0.76', '0.88', '0.57', '0.26', '0.93', '0.80', '0.92', '0.59'],
+        'Recall': ['0.11', '0.46', '0.41', '0.32', '0.56', '0.11', '0.11', '0.41', '0.32', '0.56', '0.45', '0.06', '0.41', '0.40', '0.48', '0.10', '0.10', '0.43', '0.34', '0.54'],
+        'F-Score': ['0.15', '0.53', '0.54', '0.47', '0.60', '0.15', '0.20', '0.54', '0.48', '0.59', '0.08', '0.11', '0.54', '0.56', '0.52', '0.15', '0.19', '0.56', '0.49', '0.56'],
+        'Hamming loss': ['0.002', '0.002', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001', '0.001']
+    }
 
-            # Create 'confidence_range' column
-            filtered_data['confidence_range'] = pd.cut(filtered_data['confidence'], bins=[x[0] for x in confidence_ranges] + [1.01])
-
-            # Convert 'confidence_range' to strings
-            filtered_data['confidence_range'] = filtered_data['confidence_range'].astype(str)
-
-            # Calculate the percentage of reasons in each confidence range
-            percentage_by_confidence_range = (filtered_data.groupby('confidence_range').size() / len(filtered_data)) * 100
-            percentage_by_confidence_range = percentage_by_confidence_range.reset_index(name='percentage')
-
-            fig = px.bar(percentage_by_confidence_range, x='confidence_range', y='percentage',
-                        text='percentage',
-                        title=f"Percentage of Reasons by Confidence Range (Threshold: {user_min_confidence})",
-                        labels={'confidence_range': 'Confidence Range', 'percentage': 'Percentage of Reasons'},
-                        height=530)
-
-            fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
-
-            st.write(fig, use_container_width=True)  # Use st.write instead of st.pyplot
-        except Exception as e:
-            st.warning(f"An error occurred: {e}")
+    df = pd.DataFrame(data)
+    return df
 
 #Generate_age_gender_chart 
 
@@ -137,6 +121,8 @@ def run_dashboard():
         user_min_confidence = st.slider("Min Confidence", min_value=0.00, max_value=1.00, value=0.5, step=0.01)
         user_min_age = st.slider("Min Age", min_value=0, max_value=70, value=30, step=1)
         user_gender = st.selectbox("Select Gender", ["Male", "Female", "Both"])
+        algo_filter = st.selectbox('Select Algo', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
+        filter_option = st.selectbox('Select filter option', ('Precision', 'Recall'))
         generate_pattern = st.form_submit_button("Generate Pattern")
 
     # If the "Generate Pattern" button is clicked
@@ -159,8 +145,26 @@ def run_dashboard():
         # Filter data based on user input
         filtered_data = trauma_reasons[trauma_reasons['confidence'] >= user_min_confidence]
 
+        col1, col2 = st.columns(2)
+
+        with col1:
         # Visualize pattern generation
-        visualize_pattern_generation(filtered_data, filtered_data.head(5), algorithm_choice, user_min_confidence)
+            visualize_pattern_generation(filtered_data, filtered_data.head(5), algorithm_choice, user_min_confidence)
+        with col2:
+        # Visualize pattern generation
+            st.markdown('**Result Table**')
+            df = create_table()
+
+            
+            if filter_option == 'Precision':
+                st.write("Table according to Precesion:")
+                st.table(df[['Algorithm', 'Classifier', 'F-Score', 'Hamming loss'] + ['Precision']][(df['Algorithm'] == algo_filter)])
+            elif filter_option == 'Recall':
+                st.write("Table according to Recall:")
+                st.table(df[['Algorithm', 'Classifier', 'F-Score', 'Hamming loss'] + ['Recall']][(df['Algorithm'] == algo_filter)])
+            else:
+                st.write("Invalid option selected")
+        
 
         # Organize charts in two columns
         col1, col2 = st.columns(2)
@@ -173,6 +177,7 @@ def run_dashboard():
         with col2:
             generate_top_occupation_gender_chart(trauma_reasons, user_gender, user_min_confidence, top_n=5)
 
+    
 
 if __name__ == "__main__":
     run_dashboard()
