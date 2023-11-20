@@ -16,8 +16,8 @@ def filedownload(df):
     return href
 
 def visualize_pattern_generation(filtered_data, top5_patterns_df, algorithm_choice, user_min_confidence):
-    st.markdown(f'**Total Number of Reasons: {filtered_data.shape[0]}**')
-    st.dataframe(filtered_data[["Exclusion", "reason", "confidence", "report_type"]], height=450)
+    st.markdown(f'**Query generation based on model and classifier selection (Total Number of Reasons: {filtered_data.shape[0]})**')
+    st.dataframe(filtered_data[["Exclusion", "reason", "confidence", "report_type"]], height=250)
     st.markdown(filedownload(filtered_data), unsafe_allow_html=True)
 
 def create_table():
@@ -111,8 +111,11 @@ def run_dashboard():
         "B": "B",
         "C": "C"
     }
+    filter_options= ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning')
+    algo_filter = st.sidebar.selectbox('Select Algoritm:', filter_options)
 
-    algorithm_choice = st.sidebar.selectbox("Select algorithm type:", list(algorithm_choices.keys()))
+    algorithm_choice = st.sidebar.selectbox("Select Classifier:", list(algorithm_choices.keys()))
+    #algo_filter = st.sidebar.selectbox('Select Algorithm', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
 
     st.sidebar.header(algorithm_choices[algorithm_choice])
 
@@ -121,9 +124,9 @@ def run_dashboard():
         user_min_confidence = st.slider("Min Confidence", min_value=0.00, max_value=1.00, value=0.5, step=0.01)
         user_min_age = st.slider("Min Age", min_value=0, max_value=70, value=30, step=1)
         user_gender = st.selectbox("Select Gender", ["Male", "Female", "Both"])
-        algo_filter = st.selectbox('Select Algorithm', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
-        filter_option = st.selectbox('Select filter option', ('Precision', 'Recall'))
-        generate_pattern = st.form_submit_button("Generate Pattern")
+        #algo_filter = st.selectbox('Select Algorithm', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
+        #filter_option = st.selectbox('Select filter option', ('Precision', 'Recall'))
+        generate_pattern = st.form_submit_button("Generate query")
 
     # If the "Generate Pattern" button is clicked
     if generate_pattern:
@@ -149,21 +152,19 @@ def run_dashboard():
 
         with col1:
         # Visualize pattern generation
-            visualize_pattern_generation(filtered_data, filtered_data.head(5), algorithm_choice, user_min_confidence)
-        with col2:
-        # Visualize pattern generation
             st.markdown('**Result Table**')
             df = create_table()
 
             
-            if filter_option == 'Precision':
-                st.write("Table according to Precesion:")
-                st.table(df[['Algorithm', 'Classifier', 'F-Score', 'Hamming loss'] + ['Precision']][(df['Algorithm'] == algo_filter)])
-            elif filter_option == 'Recall':
-                st.write("Table according to Recall:")
-                st.table(df[['Algorithm', 'Classifier', 'F-Score', 'Hamming loss'] + ['Recall']][(df['Algorithm'] == algo_filter)])
+            if algo_filter in filter_options:
+                st.write(f"Full Table - Algorithm Filter ({algo_filter}):")
+                st.table(df[['Algorithm', 'Classifier', 'Precision', 'Recall',  'F-Score', 'Hamming loss']][df['Algorithm'] == algo_filter])
             else:
                 st.write("Invalid option selected")
+        
+        with col2:
+        # Visualize pattern generation
+            visualize_pattern_generation(filtered_data, filtered_data.head(5), algorithm_choice, user_min_confidence)
         
 
         # Organize charts in two columns
