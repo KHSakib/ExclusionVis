@@ -1,9 +1,22 @@
 import base64
+import io
 import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from skmultilearn.problem_transform import BinaryRelevance, ClassifierChain, LabelPowerset
+from skmultilearn.ensemble import RakelD
+from sklearn.preprocessing import KBinsDiscretizer, OneHotEncoder
+from sklearn.metrics import accuracy_score, classification_report
+
 
 st.set_page_config(layout='wide')
 st.title("ExclusionVis: A Visual Interactive System for Exclusion Analysis in the Life Insurance Using Machine Learning Techniques")
@@ -111,13 +124,81 @@ def run_dashboard():
         "B": "B",
         "C": "C"
     }
-    filter_options= ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning')
-    algo_filter = st.sidebar.selectbox('Select Algoritm:', filter_options)
+    #filter_options= ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning')
+    #algo_filter = st.sidebar.selectbox('Select Algoritm:', filter_options)
 
-    algorithm_choice = st.sidebar.selectbox("Select Classifier:", list(algorithm_choices.keys()))
+    # File uploader
+    uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+
+    # Options for algorithm and classifier
+    algorithm_option = st.sidebar.selectbox("Select Algorithm", ["Binary Relevance", "Classifier Chain", "Label Powerset", "Ensemble Learning"])
+    classifier_option = st.sidebar.selectbox("Select Classifier", ["MultinomialNB", "SVC", "Logistic Regression", "Random Forest", "Decision Tree"])
+
+    #algorithm_choice = st.sidebar.selectbox("Select Classifier:", list(algorithm_choices.keys()))
     #algo_filter = st.sidebar.selectbox('Select Algorithm', ('Binary Relevance', 'Classifier Chain', 'Label Powerset', 'Ensemble Learning'))
 
-    st.sidebar.header(algorithm_choices[algorithm_choice])
+    #st.sidebar.header(algorithm_choices[algorithm_choice])
+
+    # Map classifiers to their corresponding sklearn objects
+    classifier_dict = {
+        "MultinomialNB": MultinomialNB(),
+        "SVC": SVC(probability=True),
+        "Logistic Regression": LogisticRegression(max_iter=1000),
+        "Random Forest": RandomForestClassifier(),
+        "Decision Tree": DecisionTreeClassifier()
+    }
+
+    # Function to get the chosen classifier
+    def get_classifier(classifier_name):
+        return classifier_dict[classifier_name]
+
+    # Function to get the chosen algorithm
+    def get_algorithm(algorithm_name, base_classifier):
+        if algorithm_name == "Binary Relevance":
+            return BinaryRelevance(classifier=base_classifier)
+        elif algorithm_name == "Classifier Chain":
+            return ClassifierChain(classifier=base_classifier)
+        elif algorithm_name == "Label Powerset":
+            return LabelPowerset(classifier=base_classifier)
+        elif algorithm_name == "Ensemble Learning":
+            return RakelD(base_classifier)
+
+    if uploaded_file is not None:
+        # Load the data
+        data = pd.read_csv(uploaded_file)
+
+        # Prepare the data
+        X = data['reason']
+        y = data[['confidence']]
+
+        # Discretize the confidence scores into 5 bins
+        discretizer = KBinsDiscretizer(n_bins=5, encode='ordinal', strategy='uniform')
+        y_binned = discretizer.fit_transform(y)
+
+        # One-hot encode the binned confidence scores to create a binary matrix
+        one_hot_encoder = OneHotEncoder(sparse=False)
+        y_encoded = one_hot_encoder.fit_transform(y_binned)
+
+        # Vectorize the text data
+        vectorizer = CountVectorizer()
+        X_vectorized = vectorizer.fit_transform(X)
+
+        # Split the data into training and test sets
+        X_train, X_test, y_train, y_test = train_test_split(X_vectorized, y_encoded, test_size=0.2, random_state=42)
+
+        # Get the selected classifier and algorithm
+        base_classifier = get_classifier(classifier_option)
+        classifier = get_algorithm(algorithm_option, base_classifier)
+
+        # Train the classifier
+        classifier.fit(X_train, y_train)
+
+        # Make predictions
+        y_pred = classifier.predict(X_test)
+
+        # Evaluate the classifier by directly comparing the binary matrices
+        accuracy = accuracy_score(y_test, y_pred)
+        report = classification_report(y_test, y_pred, output_dict=True)
 
     # Add sliders for minimum age and gender selection to the Streamlit sidebar
     with st.sidebar.form("user_form"):
@@ -153,18 +234,25 @@ def run_dashboard():
         with col1:
         # Visualize pattern generation
             st.markdown('**Result Table**')
-            df = create_table()
+            # Display results in Streamlit
+            #st.write(f'Accuracy: {accuracy}')
+            #st.write("Classification Report:")
+            st.dataframe(pd.DataFrame(report).transpose(), use_container_width=True)
+            #df = create_table()
 
             
-            if algo_filter in filter_options:
-                st.write(f"Full Table - Algorithm Filter ({algo_filter}):")
-                st.table(df[['Algorithm', 'Classifier', 'Precision', 'Recall',  'F-Score', 'Hamming loss']][df['Algorithm'] == algo_filter])
-            else:
-                st.write("Invalid option selected")
+            #if algo_filter in filter_options:
+                #st.write(f"Full Table - Algorithm Filter ({algo_filter}):")
+                #st.table(df[['Algorithm', 'Classifier', 'Precision', 'Recall',  'F-Score', 'Hamming loss']][df['Algorithm'] == algo_filter])
+            #else:
+                #st.write("Invalid option selected")
         
         with col2:
         # Visualize pattern generation
-            visualize_pattern_generation(filtered_data, filtered_data.head(5), algorithm_choice, user_min_confidence)
+            st.markdown('**Pattern Generation Visualization**')
+            # Adding some space to match the length of col1
+            st.markdown("<br>", unsafe_allow_html=True)
+            visualize_pattern_generation(filtered_data, filtered_data.head(7), classifier_option, user_min_confidence)
         
 
         # Organize charts in two columns
