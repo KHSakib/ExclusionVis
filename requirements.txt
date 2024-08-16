@@ -11,4 +11,3 @@ seaborn
 plotly
 scikit-multilearn
 scikit-learn
-sparse
