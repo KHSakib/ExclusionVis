@@ -9,5 +9,5 @@ prefixspan
 PyAutoGUI
 seaborn
 plotly
-scikit-multilearn==0.2.0
+scikit-multilearn
 scikit-learn==0.24.0
