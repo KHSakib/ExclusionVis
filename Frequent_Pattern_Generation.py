@@ -176,8 +176,10 @@ def run_dashboard():
         y_binned = discretizer.fit_transform(y)
 
         # One-hot encode the binned confidence scores to create a binary matrix
-        one_hot_encoder = OneHotEncoder(sparse=False)
-        y_encoded = one_hot_encoder.fit_transform(y_binned)
+        #one_hot_encoder = OneHotEncoder(sparse=False)
+        #y_encoded = one_hot_encoder.fit_transform(y_binned)
+        one_hot_encoder = OneHotEncoder()
+        y_encoded = one_hot_encoder.fit_transform(y_binned).toarray()
 
         # Vectorize the text data
         vectorizer = CountVectorizer()
